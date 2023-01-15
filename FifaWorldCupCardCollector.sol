@@ -18,7 +18,7 @@ contract FifaWorldCupCardCollector {
     }
 
     struct Account {
-        uint256[] listings; //max 5 listings per account. Stores indexes of listings in the market.
+        uint256[] listings;             //max 5 listings per account. Stores indexes of listings in the market.
         uint256[N_COLLECTIBLES] cards;  //one collectible card per WC team plus the world cup. The index represents the card id. The value represents the quantity of that particular card. 
     }
 
@@ -32,6 +32,7 @@ contract FifaWorldCupCardCollector {
     event NewListing(uint256 listing_id, address lister, int8 id_give, uint256 eth_give, int8 id_receive, uint256 eth_receive);
     event ListingAccepted(uint256 listing_id, address lister, address buyer, int8 id_give, uint256 eth_give, int8 id_receive, uint256 eth_receive);
     event ListingCanceled(uint256 listing_id, address lister, int8 id_give, uint256 eth_give, int8 id_receive, uint256 eth_receive);
+    
 
     constructor() {
         owner = payable(msg.sender);
@@ -51,10 +52,6 @@ contract FifaWorldCupCardCollector {
         emit PackOpened(msg.sender);
     }
 
-    /**
-        The player creating the Listing can choose to send money to the buyers as part of the operation
-        The contract stores the money sent by the lister, which is then transferred to the buyer when the listing is accepted.
-    */
     function makeListing(int8 id_give, uint256 eth_give, int8 id_receive) external payable {  
 
         //lister must not have more than MAX_LISTINGS active listings
@@ -63,6 +60,7 @@ contract FifaWorldCupCardCollector {
         //checking id of cards is valid. id=-1 means no card is offered/expected.
         require(id_give==-1 || id_give>=0 && id_give<int(N_COLLECTIBLES), "The specified id of the card to be given is invalid.");
         require(id_receive==-1 || (id_receive>=0 && id_receive<int(N_COLLECTIBLES)), "The specified id of the card to be received is invalid.");
+        require(id_give!=-1 || id_receive!=-1, "No card to be given or received was specified in the listing.");
 
 
         //lister must have more than one of the card type being offered in his inventory, from where it is removed (unless the listing is canceled)
@@ -87,8 +85,6 @@ contract FifaWorldCupCardCollector {
 
     function deleteListingFromAccount(uint256 listing_id) private {
         
-        //To avoid gaps in the market array, we move the last listing to the position of the listing to be deleted, and then delete the last item.
-        //It is also necessary to update the pointers of the personal accounts involved.
         address lister = address(market[listing_id].account);
         bool found=false;
         uint i = 0;
@@ -104,7 +100,6 @@ contract FifaWorldCupCardCollector {
             i++;
         }
     }
-
 
     function acceptListing(uint256 listing_id) external payable{
         
@@ -122,7 +117,7 @@ contract FifaWorldCupCardCollector {
 
         if(market[listing_id].id_receive!=-1)
         {
-            accounts[msg.sender].cards[uint256(int256(market[listing_id].id_receive))]++;                      //send card to buyer (card was previously on hold when the listing was created)
+            accounts[msg.sender].cards[uint256(int256(market[listing_id].id_receive))]++;         //send card to buyer (card was previously on hold when the listing was created)
         } 
 
         payable(msg.sender).transfer(market[listing_id].eth_receive);
